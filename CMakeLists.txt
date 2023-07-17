@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 3.1)
 project(Boxer VERSION 1.0.0 LANGUAGES CXX)
 
+include(GNUInstallDirs)
+
 set(LINUX FALSE)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
    set(LINUX TRUE)
@@ -27,7 +29,10 @@ endif ()
 
 # Library definition and features
 add_library(${PROJECT_NAME} ${SOURCES})
-target_include_directories(${PROJECT_NAME} PUBLIC "${INC_DIR}")
+target_include_directories(${PROJECT_NAME} PUBLIC
+   $<BUILD_INTERFACE:${INC_DIR}>
+   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_strong_enums cxx_nullptr)
 
 # Platform-specific dependencies
@@ -51,4 +56,28 @@ endif ()
 option(BOXER_BUILD_EXAMPLES "Build example programs" OFF)
 if (BOXER_BUILD_EXAMPLES)
    add_subdirectory("examples")
+endif()
+
+# Install rules
+option(BOXER_INSTALL "Generate installation target" ON)
+if (BOXER_INSTALL)
+   install(TARGETS Boxer
+           EXPORT BoxerTargets)
+
+   install(DIRECTORY include/boxer DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+           FILES_MATCHING PATTERN boxer.h)
+
+   set(BOXER_CONFIG_PATH "${CMAKE_INSTALL_LIBDIR}/cmake/Boxer")
+   install(EXPORT BoxerTargets
+           FILE "BoxerTargets.cmake"
+           NAMESPACE Boxer::
+           EXPORT_LINK_INTERFACE_LIBRARIES
+           DESTINATION "${BOXER_CONFIG_PATH}")
+
+   include(CMakePackageConfigHelpers)
+   write_basic_package_version_file(
+      "${BOXER_CONFIG_PATH}/BoxerConfigVersion.cmake"
+      VERSION ${PROJECT_VERSION}
+      COMPATIBILITY AnyNewerVersion
+   )
 endif()
